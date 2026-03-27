@@ -795,17 +795,43 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(51, 65, 85);
     
+    const formatDate = (timestamp: any) => {
+      if (!timestamp) return 'No registrada';
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp.seconds * 1000);
+      return date.toLocaleString('es-CO', { 
+        year: 'numeric', month: 'long', day: 'numeric', 
+        hour: '2-digit', minute: '2-digit' 
+      });
+    };
+
+    const startTime = formatDate(config.sessionStart);
+    const endTime = formatDate(config.sessionEnd);
+    
+    const initialVoters = config.initialSnapshot?.voterCount || 0;
+    const initialVotes = initialVoters * 3;
+    
+    const finalVoters = config.sessionStatus === 'ended' && config.finalSnapshot ? config.finalSnapshot.voterCount : Math.round(stats.totalVotes / 3);
+    const finalVotes = finalVoters * 3;
+
     const formalReportText = [
       `En la ciudad de Sincelejo, a los ${new Date().getDate()} días del mes de marzo de ${new Date().getFullYear()}, `,
       `se emite el presente reporte consolidado para la jornada electoral de la Institución Educativa Villa Margarita.`,
       '',
-      `Se registró una participación total de ${Math.round(stats.totalVotes / 3)} estudiantes, `,
+      `--- DETALLES DE LA JORNADA ---`,
+      `Apertura de la jornada: ${startTime}`,
+      `Cierre de la jornada: ${endTime}`,
+      `Votos registrados al iniciar el sistema: ${initialVotes} (${initialVoters} estudiantes)`,
+      `Votos registrados al finalizar/actual: ${finalVotes} (${finalVoters} estudiantes)`,
+      '',
+      `--- PARTICIPACIÓN ---`,
+      `Se registró una participación total de ${finalVoters} estudiantes, `,
       `quienes ejercieron su derecho al voto en las ${stats.totalMesas} mesas habilitadas.`,
+      `El total de votos individuales depositados en las urnas virtuales (Consejo, Contraloría y Personería) fue de ${finalVotes}.`,
       '',
       `El censo electoral reportado fue de ${config.census} estudiantes, lo que representa `,
-      `un índice de participación del ${config.census > 0 ? Math.round((Math.round(stats.totalVotes / 3) / config.census) * 100) : 0}%.`,
+      `un índice de participación del ${config.census > 0 ? Math.round((finalVoters / config.census) * 100) : 0}%.`,
       '',
-      'Los resultados presentados en este documento han sido procesados y validados por el sistema ',
+      'Los resultados de los candidatos presentados en las tablas superiores han sido procesados y validados por el sistema ',
       'de votación electrónica institucional, garantizando la transparencia y veracidad de cada sufragio.',
       '',
       'Este reporte sirve como acta oficial de cierre de la jornada electoral.'
