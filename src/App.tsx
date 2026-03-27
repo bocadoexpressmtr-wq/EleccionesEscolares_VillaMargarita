@@ -577,6 +577,18 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   };
 
   const generateResultsPDF = async () => {
+    let currentVotes = votes;
+    if (currentVotes.length === 0) {
+      toast.info('Recopilando datos detallados para el reporte...', { duration: 2000 });
+      try {
+        const snapshot = await getDocs(collection(db, 'votes'));
+        currentVotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoteRecord));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, 'votes');
+        return; // Stop PDF generation if we can't get votes
+      }
+    }
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const instName = config.institutionName || 'INSTITUCIÓN EDUCATIVA VILLA MARGARITA';
@@ -630,7 +642,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
       doc.text(`Mesa: ${mesa.name} (Grado: ${mesa.grade})`, 14, currentY);
       currentY += 8;
 
-      const mesaVotes = votes.filter(v => v.mesaId === mesa.id);
+      const mesaVotes = currentVotes.filter(v => v.mesaId === mesa.id);
 
       // Tables for each position
       const positions: ('consejo' | 'contraloria' | 'personeria')[] = ['consejo', 'contraloria', 'personeria'];
@@ -686,7 +698,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
       const gradeTableData = [];
       for (const grade of GRADES) {
         const gradeCandidates = candidates.filter(c => c.position === 'consejo' && c.grade === grade);
-        const gradeVotes = votes.filter(v => v.position === 'consejo' && v.grade === grade);
+        const gradeVotes = currentVotes.filter(v => v.position === 'consejo' && v.grade === grade);
         const results = gradeCandidates.map(c => ({
           name: c.name,
           votes: gradeVotes.filter(v => v.candidateId === c.id).length
@@ -720,11 +732,11 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
       const posCandidates = candidates.filter(c => c.position === pos);
       const results = posCandidates.map(c => ({
         name: c.name,
-        votes: votes.filter(v => v.candidateId === c.id).length
+        votes: currentVotes.filter(v => v.candidateId === c.id).length
       }));
       results.push({ 
         name: 'Voto en Blanco', 
-        votes: votes.filter(v => v.position === pos && v.candidateId === 'blanco').length 
+        votes: currentVotes.filter(v => v.position === pos && v.candidateId === 'blanco').length 
       });
       results.sort((a, b) => b.votes - a.votes);
 
